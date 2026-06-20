@@ -174,20 +174,21 @@ Reply with EXACTLY one word — either IN_SCOPE or OUT_OF_SCOPE. No explanation.
 @traceable(name="streamlit_ask_bot")
 def ask_bot(question: str, retriever, llm) -> dict:
     """Full chatbot pipeline with guardrails."""
+
     # Step 1: Classify question
-    clf_prompt   = OOS_PROMPT.invoke({"question": question})
+    clf_prompt = OOS_PROMPT.invoke({"question": question})
+
     try:
-    response = llm.invoke(clf_prompt)
+        response = llm.invoke(clf_prompt)
 
-    if hasattr(response, "content"):
-        clf_response = response.content.strip().upper()
-    else:
-        clf_response = str(response).strip().upper()
+        if hasattr(response, "content"):
+            clf_response = response.content.strip().upper()
+        else:
+            clf_response = str(response).strip().upper()
 
-except Exception as e:
-    st.error(f"Groq Error: {e}")
-    raise
-
+    except Exception as e:
+        st.error(f"Groq Error: {e}")
+        raise
 
     if "OUT_OF_SCOPE" in clf_response:
         return {
@@ -196,22 +197,37 @@ except Exception as e:
             "classification": "OUT_OF_SCOPE"
         }
 
-    # Step 2: RAG pipeline
-    docs    = retriever.invoke(question)
+    # Step 2: Retrieve documents
+    docs = retriever.invoke(question)
+
+    # Step 3: Generate answer
     context = format_docs(docs)
-    prompt  = RAG_PROMPT.invoke({"context": context, "question": question})
-    answer  = StrOutputParser().invoke(llm.invoke(prompt))
+    prompt = RAG_PROMPT.invoke({
+        "context": context,
+        "question": question
+    })
+
+    response = llm.invoke(prompt)
+
+    if hasattr(response, "content"):
+        answer = response.content
+    else:
+        answer = str(response)
 
     sources = [
         {
-            "source":  os.path.basename(d.metadata.get("source", "?")),
-            "page":    d.metadata.get("page", "?"),
+            "source": os.path.basename(d.metadata.get("source", "?")),
+            "page": d.metadata.get("page", "?"),
             "snippet": d.page_content[:200]
         }
         for d in docs
     ]
-    return {"answer": answer, "sources": sources, "classification": "IN_SCOPE"}
 
+    return {
+        "answer": answer,
+        "sources": sources,
+        "classification": "IN_SCOPE"
+    }
 
 # ─── Chat session state ───────────────────────────────────────────────────────
 if "messages" not in st.session_state:
