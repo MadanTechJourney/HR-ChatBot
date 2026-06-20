@@ -78,7 +78,7 @@ st.markdown("""
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 CORPUS_PATH   = "hr_docs/"        # folder containing all 11 PDFs
-LLM_MODEL     = "llama3-8b-8192"  # Groq model
+LLM_MODEL = "llama-3.1-8b-instant" # Groq model
 CHUNK_SIZE    = 800
 CHUNK_OVERLAP = 150
 TOP_K         = 5
